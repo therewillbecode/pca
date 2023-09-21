@@ -1,3 +1,6 @@
+mod lib;
+
 fn main() {
-    println!("Hello, world!");
+    let a = lib::rand_matrix();
+    println!("{}", a);
 }
