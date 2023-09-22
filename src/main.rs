@@ -10,4 +10,5 @@ fn main() {
     println!("normalised {}", normalised.clone());
 
     let mean_centered = center_at_mean(normalised);
+    println!("mean centered {}", mean_centered.clone());
 }
