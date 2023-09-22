@@ -1,9 +1,9 @@
 use nalgebra::{vector, DMatrix, DVector, Dyn, Dynamic, OMatrix, Vector3};
 
-// Dynamically sized and dynamically allocated matrix with
+// Alias for Dynamically sized and dynamically allocated matrix.
 type MatrixF64 = OMatrix<f64, Dyn, Dyn>;
 
-/// Rows are observations, columns are variables.
+/// Rows are observations, columns are variables/features.
 pub fn rand_matrix() -> MatrixF64 {
     DMatrix::new_random(3, 3)
 }
@@ -27,18 +27,47 @@ pub fn center_at_mean(m: OMatrix<f64, Dyn, Dyn>) -> MatrixF64 {
     let num_rows = m.nrows();
     // Get "mean row" which is vector where each element is the mean
     // of its column.
-    let mut means = Vec::<f64>::new();
+    let mut col_means = Vec::<f64>::new();
 
     for i in 0..m.ncols() {
         let column: DVector<f64> = m.column(i).into();
         let column_sum: f64 = column.data.as_vec().iter().sum();
         let column_mean = column_sum / num_rows as f64;
-        means.push(column_mean);
-        println!("mean {}", column_mean);
+        col_means.push(column_mean);
     }
 
-    let means_row: DVector<f64> = DVector::from_vec(means);
+   let means_row: DVector<f64> = DVector::from_vec(col_means.clone());
+//       .insert_rows(1, num_rows, col_means);
 
+println!("col mean len {:?}", col_means.len().clone());
+println!("col mean len {:?}", m.ncols().clone());
+
+//prientln!("num rors {}", num_rows);
+//let a : Matrix3x3::from_rows(co)
+    let centering_matrix: OMatrix<f64, Dyn, Dyn> = OMatrix::<f64, Dyn, Dyn>::from_vec(2, 2, col_means.clone());
+    println!("cen {}", centering_matrix.clone());
+
+    //let centering_matrix: OMatrix<f64, Dyn, Dyn> = OMatrix::<f64, Dyn, Dyn>::zeros(num_rows, m.ncols());
+   // .fixed_rows::<2>(0).into();
+   // (&[means_row; m.ncols()]);
+    // OMatrix::from_row_slice_generic(Dyn(num_rows), Dyn(m.ncols()),(&means_row).into());
+    //   let dm1 = OMatrix::from_vec_generic(Dyn(num_rows), Dyn(col_means.len()), col_means);
+
+    // Our centering matrix 
+    // | mean_1 mean_2 ... |
+    // | mean_1 mean_2 ... |
+    // | mean_1 mean_2 ... |
+    //let vector_of_ones : DVector<f64> = DVector::repeat(num_rows, 1.0); 
+  //  .insert_rows(i, n, val)
+  //  for i in 0..num_rows {
+  //      
+  //  }
+
+    //let centering_matrix = .insert_rows(i, n, )
+//
+    //// Mean centre our original matrix
+//
+    //let ff : OMatrix<f64, Dyn, Dyn> = means_row * vector_of_ones;
     //    Builds a vector filled with a constant.
     //let vector_of_ones: DVector<f64> = DVec::from_elem(m.ncols(), 1.0);
 
