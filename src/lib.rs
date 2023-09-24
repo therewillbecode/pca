@@ -45,9 +45,6 @@ pub fn center_at_mean(m: DMatrix<f64>) -> DMatrix<f64> {
 /// think of covariance as average product of distances from means
 // which gives the direction of the relationship but not strength.
 pub fn population_covariance(xs: &Vec<f64>, ys: &Vec<f64>) -> anyhow::Result<f64> {
-    println!("xs {:?}", xs.clone());
-    println!("ys {:?}", ys.clone());
-
     if !(xs.len() == ys.len()) {
         return Err(anyhow!(
             "Cannot compute covariance of vec of different lengths"
@@ -61,16 +58,14 @@ pub fn population_covariance(xs: &Vec<f64>, ys: &Vec<f64>) -> anyhow::Result<f64
     let mean_xs: f64 = xs.iter().sum::<f64>() / xs.len() as f64;
     let mean_ys: f64 = ys.iter().sum::<f64>() / ys.len() as f64;
 
-    let cov = xs
+    let covariance = xs
         .iter()
         .enumerate()
         .map(|(pos, i)| (xs[pos] - mean_xs) * (ys[pos] - mean_ys))
         .sum::<f64>()
         / (xs.len()) as f64;
 
-    println!("  cov: {}", cov.clone());
-
-    Ok(cov)
+    Ok(covariance)
 }
 
 /// Gets the cov matrix (C) of rows (R):
@@ -116,10 +111,7 @@ pub fn covariance_matrix(m: DMatrix<f64>) -> anyhow::Result<DMatrix<f64>> {
     let cov_matrix: DMatrix<f64> = DMatrix::from_fn(m.ncols(), m.ncols(), |r, c| {
         let xs: DVector<f64> = m.column(r).into();
         let ys: DVector<f64> = m.column(c).into();
-        //
-        println!("covar({},{})", r, c);
 
-        //  format!("covar({},{})", r, c)
         population_covariance(ys.data.as_vec(), xs.data.as_vec()).unwrap() // fixme
     });
 
