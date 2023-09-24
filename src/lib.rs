@@ -122,12 +122,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn covariance() {
+    fn covariance_1() {
         let xs = vec![1.0, 3.0, 6.0, 7.0];
         let ys = vec![2.0, 5.0, 2.0, 3.0];
         let res = population_covariance(&xs, &ys).unwrap();
 
         assert_eq!(res, -0.25);
+    }
+
+    #[test]
+    fn covariance_2() {
+        let xs = vec![1.0, 99.0, 3.0, 4.0];
+        let ys = vec![1.0, 2.0, 3.0, 0.0];
+        let res = population_covariance(&xs, &ys).unwrap();
+
+        assert_eq!(res, 11.875);
     }
 
     #[test]
@@ -142,9 +151,7 @@ mod tests {
     #[test]
     fn covariance_matrix_computes() {
         let m = DMatrix::from_row_slice(3, 3, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
-
         let res = covariance_matrix(m).data.as_vec().to_owned();
-
         let expected: Vec<f64> = vec![
             0.66666667, 0.66666667, 0.66666667, 0.66666667, 0.66666667, 0.66666667, 0.66666667,
             0.66666667, 0.66666667,
