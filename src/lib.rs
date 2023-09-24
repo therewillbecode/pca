@@ -16,32 +16,27 @@ pub fn normalise(mut m: DMatrix<f64>) -> DMatrix<f64> {
     m
 }
 
+fn column_means(m: &DMatrix<f64>) -> DVector<f64> {
+    let mut col_means = Vec::<f64>::new(); // The means of our matrix columns.
+    for i in 0..m.ncols() {
+        let column: DVector<f64> = m.column(i).into();
+        let column_sum: f64 = column.data.as_vec().iter().sum();
+        let column_mean = column_sum / m.nrows() as f64;
+        col_means.push(column_mean);
+    }
+
+    DVector::from_vec(col_means.clone())
+}
 // AKA column centering (columns are variables).
 // We just move the origin of the coordinate system to coincide
 // with the average value for each dimension.
 pub fn center_at_mean(m: DMatrix<f64>) -> DMatrix<f64> {
-    // Get columns
-    //  let rows = m.columns_generic_mut(0, m.ncols());
-
-    let num_rows = m.nrows();
-    // Get "mean row" which is vector where each element is the mean
-    // of its column.
-    let mut col_means = Vec::<f64>::new();
-
-    for i in 0..m.ncols() {
-        let column: DVector<f64> = m.column(i).into();
-        let column_sum: f64 = column.data.as_vec().iter().sum();
-        let column_mean = column_sum / num_rows as f64;
-        col_means.push(column_mean);
-    }
-
-    let means_row: DVector<f64> = DVector::from_vec(col_means.clone());
+    let means_row: DVector<f64> = column_means(&m);
 
     let centering_matrix: DMatrix<f64> =
-        DMatrix::<f64>::from_fn(num_rows, m.ncols(), |_r, c| col_means[c]);
+        DMatrix::<f64>::from_fn(m.nrows(), m.ncols(), |_r, c| means_row[c]);
 
-    let mean_centered = m.clone() - centering_matrix;
-    mean_centered
+    m - centering_matrix
 }
 
 /// think of covariance as average product of distances from means
@@ -102,6 +97,8 @@ fn get_covariance_matrix(m: DMatrix<f64>) {
     let covariances = todo!();
 
     let cov_matrix: DMatrix<f64> = DMatrix::from_vec(m.ncols(), m.ncols(), covariances);
+
+    // let ::from_fn(...)
 }
 
 // V_1^T * R^T * R * v1
