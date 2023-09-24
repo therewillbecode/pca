@@ -45,6 +45,9 @@ pub fn center_at_mean(m: DMatrix<f64>) -> DMatrix<f64> {
 /// think of covariance as average product of distances from means
 // which gives the direction of the relationship but not strength.
 pub fn population_covariance(xs: &Vec<f64>, ys: &Vec<f64>) -> anyhow::Result<f64> {
+    println!("xs {:?}", xs.clone());
+    println!("ys {:?}", ys.clone());
+
     if !(xs.len() == ys.len()) {
         return Err(anyhow!(
             "Cannot compute covariance of vec of different lengths"
@@ -58,12 +61,16 @@ pub fn population_covariance(xs: &Vec<f64>, ys: &Vec<f64>) -> anyhow::Result<f64
     let mean_xs: f64 = xs.iter().sum::<f64>() / xs.len() as f64;
     let mean_ys: f64 = ys.iter().sum::<f64>() / ys.len() as f64;
 
-    Ok(xs
+    let cov = xs
         .iter()
         .enumerate()
         .map(|(pos, i)| (xs[pos] - mean_xs) * (ys[pos] - mean_ys))
         .sum::<f64>()
-        / (xs.len()) as f64)
+        / (xs.len()) as f64;
+
+    println!("  cov: {}", cov.clone());
+
+    Ok(cov)
 }
 
 /// Gets the cov matrix (C) of rows (R):
@@ -96,16 +103,27 @@ pub fn population_covariance(xs: &Vec<f64>, ys: &Vec<f64>) -> anyhow::Result<f64
 /// Cov can be anything from -inf to +inf
 /// Also remember covariance is sensitive to scaling unlike
 /// the correlation coefficient.
-pub fn covariance_matrix(m: DMatrix<f64>) -> DMatrix<f64> {
+pub fn covariance_matrix(m: DMatrix<f64>) -> anyhow::Result<DMatrix<f64>> {
+    // special case for when only one feature/column
+    if m.ncols() < 2 || m.nrows() < 2 {
+        return Err(anyhow!(
+            "Cannot compute covariance matrix unless rows > 1 and cols > 1"
+        ));
+    }
+
+    // TODO1  - need to special case when number of rows = 1 and columns = 2 so that the returned matrix is just the covar(a,b)
+    // todo 2 also need to ensure min of 2 columns exists
     let cov_matrix: DMatrix<f64> = DMatrix::from_fn(m.ncols(), m.ncols(), |r, c| {
         let xs: DVector<f64> = m.column(r).into();
         let ys: DVector<f64> = m.column(c).into();
         //
+        println!("covar({},{})", r, c);
+
         //  format!("covar({},{})", r, c)
         population_covariance(ys.data.as_vec(), xs.data.as_vec()).unwrap() // fixme
     });
 
-    cov_matrix
+    Ok(cov_matrix)
 }
 
 // V_1^T * R^T * R * v1
@@ -132,11 +150,19 @@ mod tests {
 
     #[test]
     fn covariance_2() {
-        let xs = vec![1.0, 99.0, 3.0, 4.0];
-        let ys = vec![1.0, 2.0, 3.0, 0.0];
+        let xs = vec![1.0, -99.0, 3.0, 4.0, 1.0];
+        let ys = vec![1.0, 2.0, 3.0, 0.0, 0.8];
         let res = population_covariance(&xs, &ys).unwrap();
 
-        assert_eq!(res, 11.875);
+        assert_eq!(res, -12.959999999999999);
+    }
+
+    #[test]
+    fn covariance_3() {
+        let xs = vec![1.0, 2.0];
+        let ys = vec![3.0, 4.0];
+        let res = population_covariance(&xs, &ys).unwrap();
+        assert_eq!(res, 0.25);
     }
 
     #[test]
@@ -149,13 +175,26 @@ mod tests {
     }
 
     #[test]
-    fn covariance_matrix_computes() {
+    fn covariance_matrix_fails_when_less_than_smaller_than_2x2() {
+        let m = DMatrix::from_row_slice(1, 2, &[1.0, 2.0]);
+        let res = covariance_matrix(m);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn covariance_matrix_computes_2x2() {
+        let m = DMatrix::from_row_slice(2, 2, &[1.0, 2.0, 3.0, 4.0]);
+        let res = covariance_matrix(m).unwrap().data.as_vec().to_owned();
+        let expected: Vec<f64> = vec![1.0; 2 * 2];
+
+        assert_eq!(res, expected);
+    }
+
+    #[test]
+    fn covariance_matrix_computes_3x3() {
         let m = DMatrix::from_row_slice(3, 3, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
-        let res = covariance_matrix(m).data.as_vec().to_owned();
-        let expected: Vec<f64> = vec![
-            0.66666667, 0.66666667, 0.66666667, 0.66666667, 0.66666667, 0.66666667, 0.66666667,
-            0.66666667, 0.66666667,
-        ];
+        let res = covariance_matrix(m).unwrap().data.as_vec().to_owned();
+        let expected: Vec<f64> = vec![6.0; 3 * 3];
 
         assert_eq!(res, expected);
     }
