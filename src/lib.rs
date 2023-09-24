@@ -3,7 +3,8 @@ use nalgebra::{DMatrix, DVector};
 
 /// Rows are observations, columns are variables/features.
 pub fn rand_matrix() -> DMatrix<f64> {
-    DMatrix::new_random(3, 3)
+    //  DMatrix::new_random(3, 3)
+    DMatrix::from_row_slice(3, 3, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0])
 }
 
 pub fn normalise(mut m: DMatrix<f64>) -> DMatrix<f64> {
@@ -16,6 +17,7 @@ pub fn normalise(mut m: DMatrix<f64>) -> DMatrix<f64> {
     m
 }
 
+// Gets the mean of each column of the matrix as a vector.
 fn column_means(m: &DMatrix<f64>) -> DVector<f64> {
     let mut col_means = Vec::<f64>::new(); // The means of our matrix columns.
     for i in 0..m.ncols() {
@@ -27,6 +29,7 @@ fn column_means(m: &DMatrix<f64>) -> DVector<f64> {
 
     DVector::from_vec(col_means.clone())
 }
+
 // AKA column centering (columns are variables).
 // We just move the origin of the coordinate system to coincide
 // with the average value for each dimension.
@@ -41,7 +44,7 @@ pub fn center_at_mean(m: DMatrix<f64>) -> DMatrix<f64> {
 
 /// think of covariance as average product of distances from means
 // which gives the direction of the relationship but not strength.
-pub fn population_covariance(xs: Vec<f64>, ys: Vec<f64>) -> anyhow::Result<f64> {
+pub fn population_covariance(xs: &Vec<f64>, ys: &Vec<f64>) -> anyhow::Result<f64> {
     if !(xs.len() == ys.len()) {
         return Err(anyhow!(
             "Cannot compute covariance of vec of different lengths"
@@ -93,12 +96,16 @@ pub fn population_covariance(xs: Vec<f64>, ys: Vec<f64>) -> anyhow::Result<f64> 
 /// Cov can be anything from -inf to +inf
 /// Also remember covariance is sensitive to scaling unlike
 /// the correlation coefficient.
-fn get_covariance_matrix(m: DMatrix<f64>) {
-    let covariances = todo!();
+pub fn covariance_matrix(m: DMatrix<f64>) -> DMatrix<f64> {
+    let cov_matrix: DMatrix<f64> = DMatrix::from_fn(m.ncols(), m.ncols(), |r, c| {
+        let xs: DVector<f64> = m.column(r).into();
+        let ys: DVector<f64> = m.column(c).into();
+        //
+        //  format!("covar({},{})", r, c)
+        population_covariance(ys.data.as_vec(), xs.data.as_vec()).unwrap() // fixme
+    });
 
-    let cov_matrix: DMatrix<f64> = DMatrix::from_vec(m.ncols(), m.ncols(), covariances);
-
-    // let ::from_fn(...)
+    cov_matrix
 }
 
 // V_1^T * R^T * R * v1
@@ -118,7 +125,7 @@ mod tests {
     fn covariance() {
         let xs = vec![1.0, 3.0, 6.0, 7.0];
         let ys = vec![2.0, 5.0, 2.0, 3.0];
-        let res = population_covariance(xs, ys).unwrap();
+        let res = population_covariance(&xs, &ys).unwrap();
 
         assert_eq!(res, -0.25);
     }
@@ -127,8 +134,22 @@ mod tests {
     fn covariance_empty_should_fail() {
         let xs = vec![];
         let ys = vec![];
-        let res = population_covariance(xs, ys);
+        let res = population_covariance(&xs, &ys);
 
         assert!(res.is_err());
+    }
+
+    #[test]
+    fn covariance_matrix_computes() {
+        let m = DMatrix::from_row_slice(3, 3, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
+
+        let res = covariance_matrix(m).data.as_vec().to_owned();
+
+        let expected: Vec<f64> = vec![
+            0.66666667, 0.66666667, 0.66666667, 0.66666667, 0.66666667, 0.66666667, 0.66666667,
+            0.66666667, 0.66666667,
+        ];
+
+        assert_eq!(res, expected);
     }
 }
