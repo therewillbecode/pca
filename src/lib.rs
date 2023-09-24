@@ -1,14 +1,14 @@
 use nalgebra::{vector, DMatrix, DVector, Dynamic, OMatrix, Vector3};
 
 // Alias for Dynamically sized and dynamically allocated matrix.
-type MatrixF64 = DMatrix<f64>;// OMatrix<f64, Dyn, Dyn>;
+type MatrixF64 = DMatrix<f64>; // OMatrix<f64, Dyn, Dyn>;
 
 /// Rows are observations, columns are variables/features.
 pub fn rand_matrix() -> MatrixF64 {
     DMatrix::new_random(3, 3)
 }
 
-pub fn normalise(mut m:MatrixF64) -> MatrixF64 {
+pub fn normalise(mut m: MatrixF64) -> MatrixF64 {
     for mut col in m.column_iter_mut() {
         let normalized = col.normalize(); // Help WHat does this actually do?
                                           // What does it mean to normalise data?
@@ -39,12 +39,23 @@ pub fn center_at_mean(m: MatrixF64) -> MatrixF64 {
 
     let means_row: DVector<f64> = DVector::from_vec(col_means.clone());
 
-    let centering_matrix: MatrixF64 =
-      MatrixF64::from_fn(num_rows, m.ncols(), |_r, c| col_means[c]);
-    println!("cen {}", centering_matrix.clone());
+    let centering_matrix: MatrixF64 = MatrixF64::from_fn(num_rows, m.ncols(), |_r, c| col_means[c]);
 
     let mean_centered = m.clone() - centering_matrix;
     mean_centered
+}
+
+fn population_covariance<I>(a: I, b: I) -> f64
+where
+    I: IntoIterator<Item = f64> + ExactSizeIterator,
+{
+    let mean_a = a.into_iter().sum() / a.len();
+    let mean_b = b.into_iter().sum() / b.len();
+
+    let as_dist_mean = a.into_iter().map(|elema| mean_a - elema);
+    // let mean_b =
+    //let sum_mean_distances 
+    a
 }
 
 /// Gets the cov matrix (C) of rows (R):
@@ -64,18 +75,23 @@ pub fn center_at_mean(m: MatrixF64) -> MatrixF64 {
 /// only results in a tiny jump in y.
 ///
 /// ---- Covariance Matrix ----
-/// For two dimensions would look like:
-///  | Cov(x,x)  Cov(x,y) |
-///  | Cov(x,y)  Cov(y,y) |
+/// For 3 dimensions would look like:
+///  | Cov(x,x)  Cov(x,y) Cov(x,z) |
+///  | Cov(x,y)  Cov(y,y) Cov(y,z) |
+///  | Cov(x,z)  Cov(y,z) Cov(z,z) |
 ///
-/// Diagonals represent variance as Cov(y,y) = Var(y) (variance of y)
+/// Diagonals represent variance as Cov(y,y) = Var(y) since
+//  covariance of something with itself is just variance
+//
 /// Non-diagonals represent covariance.
 ///
 /// Cov can be anything from -inf to +inf
 /// Also remember covariance is sensitive to scaling unlike
 /// the correlation coefficient.
 fn get_covariance_matrix(m: MatrixF64) {
-   //m.cov()
+    let covariances = todo!();
+
+    let cov_matrix: MatrixF64 = DMatrix::from_vec(m.ncols(), m.ncols(), covariances);
 }
 
 // V_1^T * R^T * R * v1
