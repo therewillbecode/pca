@@ -57,12 +57,11 @@ pub fn population_covariance(xs: Vec<f64>, ys: Vec<f64>) -> anyhow::Result<f64> 
         return Err(anyhow!("Cannot compute covariance of empty vec"));
     };
 
-    let mean_xs: f64 = xs.clone().into_iter().sum::<f64>() / xs.len() as f64;
-    let mean_ys: f64 = ys.clone().into_iter().sum::<f64>() / ys.len() as f64;
+    let mean_xs: f64 = xs.iter().sum::<f64>() / xs.len() as f64;
+    let mean_ys: f64 = ys.iter().sum::<f64>() / ys.len() as f64;
 
     Ok(xs
-        .clone()
-        .into_iter()
+        .iter()
         .enumerate()
         .map(|(pos, i)| (xs[pos] - mean_xs) * (ys[pos] - mean_ys))
         .sum::<f64>()
