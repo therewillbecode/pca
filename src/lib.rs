@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use nalgebra::linalg::SymmetricEigen;
 use nalgebra::{DMatrix, DVector};
 
 /// Rows are observations, columns are variables/features.
@@ -99,7 +100,6 @@ pub fn population_covariance(xs: &Vec<f64>, ys: &Vec<f64>) -> anyhow::Result<f64
 /// Also remember covariance is sensitive to scaling unlike
 /// the correlation coefficient.
 pub fn covariance_matrix(m: DMatrix<f64>) -> anyhow::Result<DMatrix<f64>> {
-    // special case for when only one feature/column
     if m.ncols() < 2 || m.nrows() < 2 {
         return Err(anyhow!(
             "Cannot compute covariance matrix unless rows > 1 and cols > 1"
@@ -118,13 +118,63 @@ pub fn covariance_matrix(m: DMatrix<f64>) -> anyhow::Result<DMatrix<f64>> {
     Ok(cov_matrix)
 }
 
-// V_1^T * R^T * R * v1
-fn _get_eigens_of_cov_matrix() {}
+pub solve_system_of_equations() {
+    //let mut A = Matrix2::new(1.0, -1.0,
+    //    -1.0, 4.0);
+//
+    //    let mut b = Vector2::new(1.0,5.0);
+    //        
+    //    let mut A_inv = Matrix2::zeros();
+    //    na::linalg::try_invert_to(A, &mut A_inv);
+    //    let A_lu = A.lu();
+    //    let A_cho = A.cholesky();
+    //    
+    //    println!("{}",A_inv*b);
+    //    println!("{}",A_lu.solve(&b).unwrap());
+    //    println!("{}",A_cho.unwrap().solve(&b));
+}
 
-fn _eigendecomp_of_cov_matrix() {}
+pub fn eigendecomposition_of_cov_matrix() {
+    // Since matrices encode linear transformations then our covariance matrix A
+    // can be seen as a kind of linear transformation and will have its own
+    // characteristic polynomial (f). The roots of which give use the eigenvalues
+    // of A.
+    //
+    // f(λ) = det(A−λI)
+    //
+    // At the roots of f we know linear transformation represented by the matrix A
+    // minus the scaling factor λ has a determinant of 0 which means the directional
+    // part of the linear transformation is 0 (no direction change)
+
+    // Once we have the eigenvalues we can find the eigenvectors.
+    // We just set our λ to the roots of the characteristic polynomial and then
+    // solve the resulting system of linear equations.
+}
 
 pub fn _get_principal_comps() {
     // First mean centre each row in the matrix.
+
+    // get the eigenvectors and eigenvalues of the covariance matrix.
+    // the the eigenvectors with the biggest eigenvalue will be the
+    // first of our principal components as it explains the biggest proportion
+    // of covariance in our space. Let's sort the eigenvectors
+    // by their eigenvalues so we rank our new "features" in terms of the variance
+    // explained.
+    // Each eigenvector represents direction of variance.
+    // Each eigenvector is orthogonal (linearly independent).
+    // let eigs = eigendecomposition_of_cov_matrix()
+
+    // The eigenvector with the biggest eigenvalue is the direction which
+    // explains the most variance. Eigenvalues near 0 means we may discard these
+    // components later potentially.
+
+    //let sorted_eigs = eigs.sort()
+
+    // Now we take the dot product of our data with the eigenvectors.
+    // Finally, transform the data by having a dot product between
+    // the Transpose of the Eigenvector subset and the Transpose of
+    // the mean-centered data.
+    // transform_data_using_eigenvectors(data, eigs)
 }
 
 #[cfg(test)]
@@ -189,5 +239,81 @@ mod tests {
         let expected: Vec<f64> = vec![6.0; 3 * 3];
 
         assert_eq!(res, expected);
+    }
+
+    #[test]
+    fn eigen_of_3x3() {
+        let m = DMatrix::from_row_slice(3, 3, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
+        let eigenvectors = m
+            .clone()
+            .symmetric_eigen()
+            .eigenvectors
+            .data
+            .as_vec()
+            .to_owned();
+        let expected_eigenvectors: Vec<f64> = vec![
+            0.40962667186957685,
+            0.5426486477297079,
+            0.7333065080920609,
+            -0.802388907893736,
+            -0.16812656383796679,
+            0.5726303336543874,
+            -0.43402537965210164,
+            0.8229616659657703,
+            -0.3665461310240397,
+        ];
+        assert_eq!(eigenvectors, expected_eigenvectors);
+
+        let eigenvalues = m.symmetric_eigen().eigenvalues.data.as_vec().to_owned();
+        let expected_eigenvalues: Vec<f64> =
+            vec![18.830235795506823, -3.1574678406080756, -0.6727679548987634];
+        assert_eq!(eigenvalues, expected_eigenvalues);
+    }
+
+    #[test]
+    fn eigen_of_4x4() {
+        let m = DMatrix::from_row_slice(
+            4,
+            4,
+            &[
+                1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
+                16.0,
+            ],
+        );
+        let eigenvectors = m
+            .clone()
+            .symmetric_eigen()
+            .eigenvectors
+            .data
+            .as_vec()
+            .to_owned();
+        let expected_eigenvectors: Vec<f64> = vec![
+            0.35441037468080533,
+            0.4227352047406468,
+            0.5198236679927599,
+            0.6522818311022068,
+            -0.7270046361666769,
+            -0.3847562596537509,
+            0.10790023406162648,
+            0.5583765925778588,
+            -0.5222356777307557,
+            0.4766781850093164,
+            0.5405251874455946,
+            -0.4559389504947205,
+            -0.2704208612808326,
+            0.6678588737647819,
+            -0.6526663890694112,
+            0.23422994491923008,
+        ];
+        assert_eq!(eigenvectors, expected_eigenvectors);
+
+        let eigenvalues = m.symmetric_eigen().eigenvalues.data.as_vec().to_owned();
+        let expected_eigenvalues: Vec<f64> = vec![
+            44.09059195493653,
+            -7.674245249726649,
+            -1.5293393614263537,
+            -0.8870073437835344,
+        ];
+        assert_eq!(eigenvalues, expected_eigenvalues);
     }
 }
