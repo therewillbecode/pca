@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use core::cmp::Ordering;
 use nalgebra::linalg::SymmetricEigen;
 use nalgebra::{DMatrix, DVector};
 
@@ -118,22 +119,6 @@ pub fn covariance_matrix(m: DMatrix<f64>) -> anyhow::Result<DMatrix<f64>> {
     Ok(cov_matrix)
 }
 
-pub solve_system_of_equations() {
-    //let mut A = Matrix2::new(1.0, -1.0,
-    //    -1.0, 4.0);
-//
-    //    let mut b = Vector2::new(1.0,5.0);
-    //        
-    //    let mut A_inv = Matrix2::zeros();
-    //    na::linalg::try_invert_to(A, &mut A_inv);
-    //    let A_lu = A.lu();
-    //    let A_cho = A.cholesky();
-    //    
-    //    println!("{}",A_inv*b);
-    //    println!("{}",A_lu.solve(&b).unwrap());
-    //    println!("{}",A_cho.unwrap().solve(&b));
-}
-
 pub fn eigendecomposition_of_cov_matrix() {
     // Since matrices encode linear transformations then our covariance matrix A
     // can be seen as a kind of linear transformation and will have its own
@@ -151,30 +136,63 @@ pub fn eigendecomposition_of_cov_matrix() {
     // solve the resulting system of linear equations.
 }
 
-pub fn _get_principal_comps() {
-    // First mean centre each row in the matrix.
+#[derive(Debug, Clone)]
+pub struct Eig {
+    pub eigenvector: Vec<f64>,
+    pub eigenvalue: f64,
+}
 
+/// The eigendecomposition is used because we want to figure out
+/// which directions explain the most variance and by how much.
+/// The eigenvector with the biggest eigenvalue is the direction which
+/// explains the most variance. Eigenvalues near 0 means we may discard these
+/// components later potentially.
+pub fn eigendecomposition(m: DMatrix<f64>) -> anyhow::Result<Vec<Eig>> {
     // get the eigenvectors and eigenvalues of the covariance matrix.
-    // the the eigenvectors with the biggest eigenvalue will be the
-    // first of our principal components as it explains the biggest proportion
-    // of covariance in our space. Let's sort the eigenvectors
-    // by their eigenvalues so we rank our new "features" in terms of the variance
-    // explained.
-    // Each eigenvector represents direction of variance.
-    // Each eigenvector is orthogonal (linearly independent).
-    // let eigs = eigendecomposition_of_cov_matrix()
+    let eigenvalues: DVector<f64> = m
+        .clone()
+        .symmetric_eigen()
+        .eigenvalues
+        //.ok_or_else(|| anyhow!("No eigenvalues found"))
+        .column(0)
+        .into();
 
-    // The eigenvector with the biggest eigenvalue is the direction which
-    // explains the most variance. Eigenvalues near 0 means we may discard these
-    // components later potentially.
+    println!("eignvals, {}", eigenvalues);
 
-    //let sorted_eigs = eigs.sort()
+    // each column is an eigenvector
+    let eigenvectors: DMatrix<f64> = m.clone().symmetric_eigen().eigenvectors;
 
-    // Now we take the dot product of our data with the eigenvectors.
-    // Finally, transform the data by having a dot product between
-    // the Transpose of the Eigenvector subset and the Transpose of
-    // the mean-centered data.
-    // transform_data_using_eigenvectors(data, eigs)
+    println!("eignvector, {}", eigenvectors.clone());
+
+    let mut eigs: Vec<Eig> = ((0 as usize)..(m.ncols() as usize))
+        .into_iter()
+        .map(|col_ix| {
+            let v: DVector<f64> = eigenvectors.column(col_ix).to_owned().into();
+
+            Eig {
+                eigenvector: v.data.as_vec().to_owned(),
+                eigenvalue: eigenvalues[col_ix],
+            }
+        })
+        .collect::<Vec<Eig>>();
+
+    eigs.sort_by(|a, b| {
+        if a.eigenvalue > b.eigenvalue {
+            Ordering::Less
+        } else if a.eigenvalue == b.eigenvalue {
+            Ordering::Equal
+        } else {
+            Ordering::Greater
+        }
+    });
+
+    print!("eigs {:?}", eigs.clone());
+
+    Ok(eigs)
+}
+
+pub fn transform_data(m: DMatrix<f64>, eigendecompoisition: Vec<Eig>) -> DMatrix<f64> {
+    todo!()
 }
 
 #[cfg(test)]
