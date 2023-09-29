@@ -140,6 +140,7 @@ pub fn eigendecomposition_of_cov_matrix() {
 pub struct Eig {
     pub eigenvector: Vec<f64>,
     pub eigenvalue: f64,
+    pub explained_var: f64,
 }
 
 /// The eigendecomposition is used because we want to figure out
@@ -147,7 +148,7 @@ pub struct Eig {
 /// The eigenvector with the biggest eigenvalue is the direction which
 /// explains the most variance. Eigenvalues near 0 means we may discard these
 /// components later potentially.
-pub fn eigendecomposition(m: DMatrix<f64>) -> anyhow::Result<Vec<Eig>> {
+pub fn principal_components(m: DMatrix<f64>) -> anyhow::Result<Vec<Eig>> {
     // get the eigenvectors and eigenvalues of the covariance matrix.
     let eigenvalues: DVector<f64> = m
         .clone()
@@ -156,6 +157,7 @@ pub fn eigendecomposition(m: DMatrix<f64>) -> anyhow::Result<Vec<Eig>> {
         //.ok_or_else(|| anyhow!("No eigenvalues found"))
         .column(0)
         .into();
+    let mut sum_eigenvalues: f64 = eigenvalues.data.as_vec().to_owned().iter().sum();
 
     println!("eignvals, {}", eigenvalues);
 
@@ -172,9 +174,12 @@ pub fn eigendecomposition(m: DMatrix<f64>) -> anyhow::Result<Vec<Eig>> {
             Eig {
                 eigenvector: v.data.as_vec().to_owned(),
                 eigenvalue: eigenvalues[col_ix],
+                explained_var:  eigenvalues[col_ix]/ sum_eigenvalues
             }
         })
         .collect::<Vec<Eig>>();
+
+        println!("ctor, {:?}", eigs.clone());
 
     eigs.sort_by(|a, b| {
         if a.eigenvalue > b.eigenvalue {
@@ -186,13 +191,24 @@ pub fn eigendecomposition(m: DMatrix<f64>) -> anyhow::Result<Vec<Eig>> {
         }
     });
 
-    print!("eigs {:?}", eigs.clone());
+   // print!("eigs {:?}", eigs.clone());
 
     Ok(eigs)
 }
 
-pub fn transform_data(m: DMatrix<f64>, eigendecompoisition: Vec<Eig>) -> DMatrix<f64> {
-    todo!()
+// The resulting projected data are essentially linear combinations
+// of the original data capturing most of the variance in the data
+pub fn transform_data(data: DMatrix<f64>, eigs_sorted: Vec<Eig>) -> DMatrix<f64> {
+    let eigenvectors: DMatrix<f64> =
+        DMatrix::<f64>::from_fn(eigs_sorted.len(),eigs_sorted.len(),
+         |r, c| eigs_sorted[c].eigenvector[r]).transpose();
+
+         println!("esssssssssssssseee {:?}", eigenvectors);
+    // take the transpose
+
+    // multiply eigs^T * original_data
+
+    data * eigenvectors
 }
 
 #[cfg(test)]
